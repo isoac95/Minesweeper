@@ -1,37 +1,44 @@
 import pprint
 import tkinter as tk
 from tkinter import messagebox
-from tkinter import *
 import time
 import random
 
+
 class Minesweeper:
     def __init__(self):
-        self.dict_of_buttons = dict()
-        self.mark_buttons = list()
-        self.open_buttons = list()
-        self.size = {"Easy" : [8, 10, 10], "Medium" : [14, 18, 40], "Hard" : [20, 24, 99]}
-        self.colour_dict = {0 : "white", 1 : "blue", 2 : "green", 3 : "red", 4 : "purple", 5 : "cyan", 6 : "yellow", 7 : "magenta", 8 : "black"}
-        self.matrix = [[]]
+        self.size = {
+            "Easy": [8, 10, 10],
+            "Medium": [14, 18, 40],
+            "Hard": [20, 24, 99]
+        }
+        self.colour_dict = {
+            i: c for i, c in enumerate([
+                "white", "blue", "green", "red", "purple",
+                "cyan", "yellow", "magenta", "black"
+            ])
+        }
         self.root = tk.Tk()
         self.frame = tk.Frame(self.root, bg="blue", padx=30, pady=2)
         self.start = time.time()
-        self.choosen = StringVar()
+        self.choosen = tk.StringVar()
         self.choosen.set("Easy")
         self.choosen.trace("w", self.callback)
+        self.reset()
         self.construct()
         self.clock()
         self.create_matrix(self.choosen.get())
-        self.close()
+        self.root.mainloop()
 
     def construct(self):
         self.root.title("MS by Ante Culo")
         self.root.configure(bg="blue")
 
-        self.drop = OptionMenu(self.root, self.choosen, "Easy", "Medium", "Hard")
+        self.drop = tk.OptionMenu(self.root, self.choosen, "Easy", "Medium", "Hard")
         self.drop.config(bg="white", relief="flat", height=1)
 
-        self.marked = tk.Label(self.root, text="Marked: " + str(self.size[self.choosen.get()][2]), relief='flat', bg="blue", fg="white")
+        self.marked = tk.Label(self.root, text="Marked: " + str(self.size[self.choosen.get()][2]),
+                               relief='flat', bg="blue", fg="white")
 
         self.time_p = tk.Label(self.root, bg="blue", fg="white")
 
@@ -41,154 +48,175 @@ class Minesweeper:
         self.drop.pack()
 
     def create_matrix(self, difficulty):
-        lst = ([None] * ((self.size[difficulty][0] * self.size[difficulty][1]) - self.size[difficulty][2])
-        + ["mine"] * self.size[difficulty][2])
+        nrows = self.size[difficulty][0]
+        ncols = self.size[difficulty][1]
+        nmine = self.size[difficulty][2]
 
+        # Create a list where nmine elements have "mine" value,
+        # while rest of the list elements have None value
+        lst = ([None]*((nrows*ncols) - nmine) + ["mine"]*nmine)
+        # Randomly shuffle list
         random.shuffle(lst)
-        n = self.size[difficulty][1]
-        self.matrix = [lst[i:i + n] for i in range(0, len(lst), n)]
+        # From randomly shuffled list create matrix with nrows rows
+        # and ncols columns
+        ncols = self.size[difficulty][1]
+        self.matrix = [lst[i:i + ncols] for i in range(0, len(lst), ncols)]
 
         for i in range(len(self.matrix)):
             for j in range(len(self.matrix[i])):
                 neighbours = list()
                 if self.matrix[i][j] != "mine":
-                    chk_lst = ([[i - 1, j - 1], [i - 1, j], [i - 1, j + 1], [i, j - 1],
-                    [i, j + 1], [i + 1, j - 1], [i + 1, j], [i + 1, j + 1]])
+                    chk_lst = ([
+                        [i - 1, j - 1], [i - 1, j], [i - 1, j + 1], [i, j - 1],
+                        [i, j + 1], [i + 1, j - 1], [i + 1, j], [i + 1, j + 1]
+                    ])
                     count = 0
-                    for element in chk_lst:
-                        if element[0] >= 0 and element[1] >= 0:
-                            neighbours.append("i" + str(element[0]) + "j" + str(element[1]))
+                    for e in chk_lst:
+                        if e[0] >= 0 and e[1] >= 0:
+                            neighbours.append("i" + str(e[0]) + "j" + str(e[1]))
                         try:
-                            if self.matrix[element[0]][element[1]] == "mine" and element[0] >= 0 and element[1] >= 0:
+                            if self.matrix[e[0]][e[1]] == "mine" and e[0] >= 0 and e[1] >= 0:
                                 count += 1
                         except IndexError:
                             continue
                     self.matrix[i][j] = count
                 name = "i" + str(i) + "j" + str(j)
-                num = str(self.matrix[i][j])
-                self.dict_of_buttons[name] = [tk.Button(self.frame, relief="groove", height=1, width=2, fg = "gray", bg="gray"), num, neighbours, i+j]
-                self.dict_of_buttons[name][0].grid(row=i, column=j)
-                self.dict_of_buttons[name][0].bind('<Button-1>', lambda event, arg=name: self.left_click(event, arg))
-                self.dict_of_buttons[name][0].bind('<Button-3>', lambda event, arg=name: self.right_click(event, arg))
-                neighbours = list()
+                value = str(self.matrix[i][j])
+                new_button = tk.Button(self.frame, relief="groove", height=1, width=2, bg="gray")
+                data = [new_button, value, neighbours, i+j]
+                self.dict_of_buttons[name] = data
+                new_button.grid(row=i, column=j)
+                new_button.bind('<Button-1>', lambda event, arg=name: self.left_click(event, arg))
+                new_button.bind('<Button-3>', lambda event, arg=name: self.right_click(event, arg))
+                # neighbours = list()
         pp = pprint.PrettyPrinter()
         pp.pprint(self.matrix)
         return self.matrix
 
     def left_click(self, event, arg):
         self.time_p.configure(fg="white")
-        if self.dict_of_buttons[arg][0] not in self.mark_buttons:
-            if self.dict_of_buttons[arg][1] != "mine":
-                if self.dict_of_buttons[arg][3] % 2 == 0:
-                    self.dict_of_buttons[arg][0].configure(bg="white", text=self.dict_of_buttons[arg][1], fg=self.colour_dict[int(self.dict_of_buttons[arg][1])], relief="flat",state="disable", disabledforeground=self.colour_dict[int(self.dict_of_buttons[arg][1])])
+        button = self.dict_of_buttons[arg][0]
+        button_val = self.dict_of_buttons[arg][1]
+        index = self.dict_of_buttons[arg][3]
+        if button not in self.mark_buttons:
+            if button_val != "mine":
+                clr = self.colour_dict[int(button_val)]
+                if index % 2 == 0:
+                    button.configure(bg="white", text=button_val, fg=clr, relief="flat",
+                                     state="disable", disabledforeground=clr)
                 else:
-                    self.dict_of_buttons[arg][0].configure(bg="gainsboro", text=self.dict_of_buttons[arg][1], fg="gainsboro", relief="flat",state="disable", disabledforeground=self.colour_dict[int(self.dict_of_buttons[arg][1])])
-                if self.dict_of_buttons[arg][0] not in self.open_buttons:
-                    self.open_buttons.append(self.dict_of_buttons[arg][0])
-                if self.dict_of_buttons[arg][1] == "0":
-                    self.dict_of_buttons[arg][0].configure(text="")
+                    button.configure(bg="gainsboro", text=button_val, fg="gainsboro", relief="flat",
+                                     state="disable", disabledforeground=clr)
+                if button not in self.open_buttons:
+                    self.open_buttons.add(button)
+                if button_val == "0":
+                    button.configure(text="")
                     self.big_open(self.dict_of_buttons[arg][2])
 
             else:
-                self.dict_of_buttons[arg][0].configure(fg="white", bg="red", text="M")
-                self.open_buttons.append(self.dict_of_buttons[arg][0])
+                button.configure(fg="white", bg="red", text="M")
+                self.open_buttons.add(button)
                 self.time_p.configure(fg="blue")
-                self.end_screen(self.dict_of_buttons[arg][0])
+                self.end_screen(button)
                 answer = messagebox.askretrycancel("Mine! :(", "Better luck next time :P")
                 if answer:
                     self.reset()
                     self.create_matrix(self.choosen.get())
-                    self.marked.configure(text="Marked: " + str(self.size[self.choosen.get()][2]-len(self.mark_buttons)))
+                    self.marked.configure(text="Marked: " + str(self.size[self.choosen.get()][2]))
                     self.time_p.configure(fg="white")
                 else:
                     exit()
             self.check_win()
 
     def right_click(self, event, arg):
-        if self.dict_of_buttons[arg][0] not in self.open_buttons and self.dict_of_buttons[arg][0] not in self.mark_buttons:
-            if len(self.mark_buttons) < self.size[self.choosen.get()][2]:
-                self.dict_of_buttons[arg][0].configure(fg="green", bg="green")
-                self.mark_buttons.append(self.dict_of_buttons[arg][0])
+        button = self.dict_of_buttons[arg][0]
+        nmines = self.size[self.choosen.get()][2]
+        if button not in self.open_buttons and button not in self.mark_buttons:
+            if len(self.mark_buttons) < nmines:
+                button.configure(fg="green", bg="green")
+                self.mark_buttons.add(button)
             else:
-                answer = messagebox.showinfo("Warning!", "Too many marked fields!")
+                messagebox.showinfo("Warning!", "Too many marked fields!")
 
-        elif self.dict_of_buttons[arg][0] in self.mark_buttons:
-            self.dict_of_buttons[arg][0].configure(fg="gray", bg="gray")
-            self.mark_buttons.remove(self.dict_of_buttons[arg][0])
+        elif button in self.mark_buttons:
+            button.configure(fg="gray", bg="gray")
+            self.mark_buttons.remove(button)
 
-        self.marked.configure(text="Marked: " + str(self.size[self.choosen.get()][2]-len(self.mark_buttons)))
+        self.marked.configure(text="Marked: " + str(nmines - len(self.mark_buttons)))
         self.check_win()
 
     def big_open(self, lst):
         for neighbour in lst:
             if neighbour in self.dict_of_buttons:
-                if self.dict_of_buttons[neighbour][1] == "0" and self.dict_of_buttons[neighbour][0] not in self.open_buttons:
-                    self.open_buttons.append(self.dict_of_buttons[neighbour][0])
-                    if self.dict_of_buttons[neighbour][3] % 2 == 0:
-                        self.dict_of_buttons[neighbour][0].configure(bg="white", text="", relief="flat")
+                nbutton = self.dict_of_buttons[neighbour][0]
+                nvalue = self.dict_of_buttons[neighbour][1]
+                clr = self.colour_dict[int(nvalue)]
+                index = self.dict_of_buttons[neighbour][3]
+                if (nvalue == "0" and nbutton not in self.open_buttons and
+                   nbutton not in self.mark_buttons):
+                    self.open_buttons.add(nbutton)
+                    if index % 2 == 0:
+                        nbutton.configure(bg="white", text="", relief="flat")
                     else:
-                        self.dict_of_buttons[neighbour][0].configure(bg="gainsboro", text="", relief="flat")
+                        nbutton.configure(bg="gainsboro", text="", relief="flat")
 
                     self.big_open(self.dict_of_buttons[neighbour][2])
-                elif self.dict_of_buttons[neighbour][0] not in self.open_buttons and self.dict_of_buttons[neighbour][1] != "mine":
-                    self.open_buttons.append(self.dict_of_buttons[neighbour][0])
+                elif (nbutton not in self.open_buttons and
+                      nvalue != "mine" and nbutton not in self.mark_buttons):
+                    self.open_buttons.add(nbutton)
 
-                    if self.dict_of_buttons[neighbour][3] % 2 == 0:
-                        self.dict_of_buttons[neighbour][0].configure(bg="white", text=self.dict_of_buttons[neighbour][1], relief="flat",
-                        fg=self.colour_dict[int(self.dict_of_buttons[neighbour][1])], disabledforeground=self.colour_dict[int(self.dict_of_buttons[neighbour][1])])
+                    if index % 2 == 0:
+                        nbutton.configure(bg="white", text=nvalue, relief="flat",
+                                          fg=clr, disabledforeground=clr)
                     else:
-                        self.dict_of_buttons[neighbour][0].configure(bg="gainsboro", text=self.dict_of_buttons[neighbour][1], relief="flat",
-                        fg=self.colour_dict[int(self.dict_of_buttons[neighbour][1])], disabledforeground=self.colour_dict[int(self.dict_of_buttons[neighbour][1])])
+                        nbutton.configure(bg="gainsboro", text=nvalue, relief="flat",
+                                          fg=clr, disabledforeground=clr)
 
     def check_win(self):
         print(len(self.open_buttons) + len(self.mark_buttons))
-        if len(self.open_buttons) + len(self.mark_buttons) == len(self.matrix) * len(self.matrix[0]):
+        if len(self.open_buttons) + len(self.mark_buttons) == len(self.matrix)*len(self.matrix[0]):
             self.time_p.configure(fg="blue")
-            answer = messagebox.showinfo("Congratulations ;)", "Time: " + str(round(time.time()-self.start)))
-            if answer:
-                self.reset()
-                self.create_matrix(self.choosen.get())
-                self.marked.configure(text="Marked: " + str(self.size[self.choosen.get()][2]-len(self.mark_buttons)))
-                self.time_p.configure(fg="white")
+            messagebox.showinfo("Congratulations ;)", "Time: " + str(round(time.time()-self.start)))
+            self.reset()
+            self.create_matrix(self.choosen.get())
+            self.marked.configure(text="Marked: " + str(self.size[self.choosen.get()][2]))
+            self.time_p.configure(fg="white")
 
     def end_screen(self, stepped_on):
-        for buttns in self.dict_of_buttons:
-            if self.dict_of_buttons[buttns][1] == "mine" and self.dict_of_buttons[buttns][0] != stepped_on and self.dict_of_buttons[buttns][0] not in self.mark_buttons:
-                self.dict_of_buttons[buttns][0].configure(bg="orange", text="M", fg="white")
-            elif self.dict_of_buttons[buttns][1] != "mine" and self.dict_of_buttons[buttns][0] in self.mark_buttons and self.dict_of_buttons[buttns][0] != stepped_on:
-                self.dict_of_buttons[buttns][0].configure(fg="red", text="X", bg="green2")
+        for item in self.dict_of_buttons.items():
+            button = item[1][0]
+            value = item[1][1]
+            if value == "mine" and button != stepped_on and button not in self.mark_buttons:
+                button.configure(bg="orange", text="M", fg="white")
+            elif value != "mine" and button in self.mark_buttons and button != stepped_on:
+                button.configure(fg="red", text="X", bg="green2")
 
     def reset(self):
         self.dict_of_buttons = dict()
-        self.mark_buttons = list()
-        self.open_buttons = list()
+        self.mark_buttons = set()
+        self.open_buttons = set()
         self.start = time.time()
         for widget in self.frame.winfo_children():
             widget.destroy()
 
     def clock(self):
-        t=time.time()
-        if t!='':
-            self.time_p.config(text="Time: "+ str(round(t-self.start)))
+        t = time.time()
+        if t:
+            self.time_p.config(text="Time: " + str(round(t-self.start)))
         self.root.after(100, self.clock)
 
     def callback(self, *args):
         print(self.choosen.get())
         size_m = self.choosen.get()
+        self.reset()
+        self.marked.configure(text="Marked: " + str(self.size[size_m][2]))
         if size_m == "Easy":
-            self.reset()
-            self.marked.configure(text="Marked: " + str(self.size[self.choosen.get()][2]-len(self.mark_buttons)))
             self.create_matrix("Easy")
-        elif size_m =="Medium":
-            self.reset()
-            self.marked.configure(text="Marked: " + str(self.size[self.choosen.get()][2]-len(self.mark_buttons)))
+        elif size_m == "Medium":
             self.create_matrix("Medium")
         else:
-            self.reset()
-            self.marked.configure(text="Marked: " + str(self.size[self.choosen.get()][2]-len(self.mark_buttons)))
             self.create_matrix("Hard")
 
-    def close(self):
-        self.root.mainloop()
 
-Minesweeper()
+if __name__ == '__main__':
+    Minesweeper()
