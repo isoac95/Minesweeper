@@ -35,7 +35,7 @@ class Minesweeper:
         self.root.configure(bg="blue")
 
         self.drop = tk.OptionMenu(self.root, self.choosen, "Easy", "Medium", "Hard")
-        self.drop.config(bg="white", relief="flat", height=1)
+        self.drop.config(bg="white", relief="flat", height=1, highlightthickness=0)
 
         self.marked = tk.Label(self.root, text="Marked: " + str(self.size[self.choosen.get()][2]),
                                relief='flat', bg="blue", fg="white")
@@ -45,7 +45,7 @@ class Minesweeper:
         self.time_p.pack()
         self.marked.pack()
         self.frame.pack()
-        self.drop.pack()
+        self.drop.pack(pady=5)
 
     def create_matrix(self, difficulty):
         nrows = self.size[difficulty][0]
@@ -59,7 +59,6 @@ class Minesweeper:
         random.shuffle(lst)
         # From randomly shuffled list create matrix with nrows rows
         # and ncols columns
-        ncols = self.size[difficulty][1]
         self.matrix = [lst[i:i + ncols] for i in range(0, len(lst), ncols)]
 
         for i in range(len(self.matrix)):
